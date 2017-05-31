@@ -1,4 +1,4 @@
-module Control.Monad.Logic.Record (get, set, insert, delete) where
+module Control.Monad.Leff.Record (get, set, insert, delete) where
 
 import Data.Symbol (class IsSymbol, SProxy, reflectSymbol)
 

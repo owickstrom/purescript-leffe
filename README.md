@@ -18,6 +18,11 @@ operations, and thus safe from being passed around incorrectly.
 **This library is highly experimental at this stage, and should probably not
 be used for anything but playful things.**
 
+## Example
+
+There's a naive `File` module, wrapping the `Node.FS` module. See the [usage
+example](example/Main.purs).
+
 ## License
 
 [Mozilla Public License Version 2.0](LICENSE)

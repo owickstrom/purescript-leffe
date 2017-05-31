@@ -1,20 +1,20 @@
-module Control.Monad.Leff.File ( kind FileMode
-                               , Read
-                               , Write
-                               , File
-                               , class FileOpen
-                               , stat
-                               , openFile
-                               , readFile
-                               , writeFile
-                               , class FileClose
-                               , closeFile
-                               ) where
+module Control.Monad.Leffe.File ( kind FileMode
+                                , Read
+                                , Write
+                                , File
+                                , class FileOpen
+                                , stat
+                                , openFile
+                                , readFile
+                                , writeFile
+                                , class FileClose
+                                , closeFile
+                                ) where
 
 import Prelude
 import Control.IxMonad (ibind, (:>>=))
 import Control.Monad.Aff.Class (class MonadAff, liftAff)
-import Control.Monad.Leff (Leff, addLeff, getLeff, lift', removeLeff)
+import Control.Monad.Leffe (Leffe, addLeffe, getLeffe, lift', removeLeffe)
 import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol, SProxy)
 import Node.Buffer (BUFFER, Buffer)
@@ -39,19 +39,19 @@ class FileOpen m (mode :: FileMode) where
     => RowCons l (File mode) r r'
     => SProxy l
     -> FilePath
-    -> Leff m (Record r) (Record r') Unit
+    -> Leffe m (Record r) (Record r') Unit
 
 instance fileOpenRead :: MonadAff (fs :: FS | e) m => FileOpen m Read where
   openFile label path = do
     fd <- lift' $ liftAff $ FS.fdOpen path FS.R Nothing
-    addLeff label (File path fd)
+    addLeffe label (File path fd)
     where
         bind = ibind
 
 instance fileOpenWrite :: MonadAff (fs :: FS | e) m => FileOpen m Write where
   openFile label path = do
     fd <- lift' $ liftAff $ FS.fdOpen path FS.W Nothing
-    addLeff label (File path fd)
+    addLeffe label (File path fd)
     where
         bind = ibind
 
@@ -61,9 +61,9 @@ stat
   => IsSymbol l
   => RowCons l (File mode) r r'
   => SProxy l
-  -> Leff m (Record r') (Record r') Stats
+  -> Leffe m (Record r') (Record r') Stats
 stat label =
-  getLeff label
+  getLeffe label
   :>>= \(File path _) -> lift' $ liftAff $ FS.stat path
 
 readFile
@@ -75,9 +75,9 @@ readFile
   -> Buffer
   -> BufferOffset
   -> BufferLength
-  -> Leff m (Record r') (Record r') Int
+  -> Leffe m (Record r') (Record r') Int
 readFile label buf offset length = do
-  File path fd <- getLeff label
+  File path fd <- getLeffe label
   lift' $ liftAff $ FS.fdRead fd buf offset length Nothing
   where
     bind = ibind
@@ -92,9 +92,9 @@ writeFile
   -> Buffer
   -> BufferOffset
   -> BufferLength
-  -> Leff m (Record r') (Record r') Unit
+  -> Leffe m (Record r') (Record r') Unit
 writeFile label contents offset length = do
-  File path fd <- getLeff label
+  File path fd <- getLeffe label
   lift' $ liftAff (FS.fdWrite fd contents offset length Nothing)
   pure unit
   where
@@ -107,7 +107,7 @@ class FileClose m (mode :: FileMode) where
     . IsSymbol l
     => RowCons l (File mode) o i
     => SProxy l
-    -> Leff m (Record i) (Record o) Unit
+    -> Leffe m (Record i) (Record o) Unit
 
 closeFile'
   :: forall m e l i o mode
@@ -115,11 +115,11 @@ closeFile'
   => MonadAff (fs :: FS | e) m
   => RowCons l (File mode) o i
   => SProxy l
-  -> Leff m (Record i) (Record o) Unit
+  -> Leffe m (Record i) (Record o) Unit
 closeFile' label = do
-  File _ fd <- getLeff label
+  File _ fd <- getLeffe label
   lift' $ liftAff $ FS.fdClose fd
-  removeLeff label
+  removeLeffe label
   where
     bind = ibind
     discard = ibind

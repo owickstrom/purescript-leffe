@@ -1,5 +1,5 @@
 {
-  "name": "purescript-kanren",
+  "name": "purescript-leffe",
   "ignore": [
     "**/.*",
     "node_modules",

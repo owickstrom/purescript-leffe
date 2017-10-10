@@ -12,7 +12,8 @@
     "purescript-indexed-monad": "^0.2.0",
     "purescript-symbols": "^3.0.0",
     "purescript-sets": "^3.0.0",
-    "purescript-node-fs-aff": "^4.0.0"
+    "purescript-node-fs-aff": "^4.0.0",
+    "purescript-record": "^0.2.3"
   },
   "devDependencies": {
     "purescript-psci-support": "^3.0.0"

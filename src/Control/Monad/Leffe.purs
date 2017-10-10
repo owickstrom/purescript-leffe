@@ -1,38 +1,42 @@
 module Control.Monad.Leffe where
 
 import Prelude
-import Control.Monad.Leffe.Record as Record
+
 import Control.IxMonad (class IxMonad, ibind, ipure)
 import Control.Monad.Eff.Class (class MonadEff, liftEff)
+import Data.Record as Record
 import Data.Symbol (class IsSymbol, SProxy)
 import Data.Tuple (Tuple(Tuple), fst)
+import Type.Row (class RowLacks)
 
 class IxMonadLeffe m where
 
   -- Retrieves a labeled effect's resource.
   getLeffe
-    :: forall label resource eff eff'
+    :: forall label resource r r'
      . IsSymbol label
-    => RowCons label resource eff eff'
+    => RowCons label resource r r'
     => SProxy label
-    -> m (Record eff') (Record eff') resource
+    -> m {|r'} {|r'} resource
 
   -- Adds a new labeled effect.
   addLeffe
-    :: forall label resource eff eff'
+    :: forall label resource r r'
      . IsSymbol label
-    => RowCons label resource eff eff'
+    => RowLacks label r
+    => RowCons label resource r r'
     => SProxy label
     -> resource
-    -> m (Record eff) (Record eff') Unit
+    -> m {|r} {|r'} Unit
 
   -- Removes a labeled effect.
   removeLeffe
-    :: forall label resource eff eff'
+    :: forall label resource r r'
      . IsSymbol label
-    => RowCons label resource eff eff'
+    => RowLacks label r
+    => RowCons label resource r r'
     => SProxy label
-    -> m (Record eff') (Record eff) Unit
+    -> m {|r'} {|r} Unit
 
 
 newtype Leffe m i o a = Leffe (i -> m (Tuple a o))

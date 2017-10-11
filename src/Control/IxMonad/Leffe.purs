@@ -1,4 +1,4 @@
-module Control.Monad.Leffe where
+module Control.IxMonad.Leffe where
 
 import Prelude
 

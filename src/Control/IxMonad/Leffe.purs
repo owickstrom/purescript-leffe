@@ -9,7 +9,7 @@ import Data.Symbol (class IsSymbol, SProxy)
 import Data.Tuple (Tuple(Tuple), fst)
 import Type.Row (class RowLacks)
 
-class IxMonadLeffe m where
+class IxMonad m <= IxMonadLeffe m where
 
   -- Retrieves a labeled effect's resource.
   getLeffe
@@ -17,7 +17,7 @@ class IxMonadLeffe m where
      . IsSymbol label
     => RowCons label resource r r'
     => SProxy label
-    -> m {|r'} {|r'} resource
+    -> m (Record r') (Record r') resource
 
   -- Adds a new labeled effect.
   addLeffe
@@ -27,7 +27,17 @@ class IxMonadLeffe m where
     => RowCons label resource r r'
     => SProxy label
     -> resource
-    -> m {|r} {|r'} Unit
+    -> m (Record r) (Record r') Unit
+
+  -- Modifies an existing labeled effect.
+  modifyLeffe
+    :: forall label r ri ro a b
+     . IsSymbol label
+    => RowCons label a r ri
+    => RowCons label b r ro
+    => SProxy label
+    -> (a -> b)
+    -> m (Record ri) (Record ro) Unit
 
   -- Removes a labeled effect.
   removeLeffe
@@ -36,7 +46,20 @@ class IxMonadLeffe m where
     => RowLacks label r
     => RowCons label resource r r'
     => SProxy label
-    -> m {|r'} {|r} Unit
+    -> m (Record r') (Record r) Unit
+
+
+-- Replaces an existing labeled effect.
+replaceLeffe
+  :: forall m label r ri ro a b
+   . IxMonadLeffe m
+  => IsSymbol label
+  => RowCons label a r ri
+  => RowCons label b r ro
+  => SProxy label
+  -> b
+  -> m (Record ri) (Record ro) Unit
+replaceLeffe l b = modifyLeffe l (const b)
 
 
 newtype Leffe m i o a = Leffe (i -> m (Tuple a o))
@@ -46,11 +69,13 @@ runLeffe :: forall m a. Functor m ⇒ Leffe m {} {} a -> m a
 runLeffe (Leffe m) = map fst (m {})
 
 
-instance ixMonadLeffeLeffe :: Applicative m ⇒ IxMonadLeffe (Leffe m) where
+instance ixMonadLeffeLeffe :: Monad m ⇒ IxMonadLeffe (Leffe m) where
   getLeffe label =
     Leffe $ \c -> pure (Tuple (Record.get label c) c)
   addLeffe label resource =
     Leffe $ \c -> pure (Tuple unit (Record.insert label resource c))
+  modifyLeffe label f =
+    Leffe $ \c -> pure (Tuple unit (Record.modify label f c))
   removeLeffe label =
     Leffe $ \c -> pure (Tuple unit (Record.delete label c))
 

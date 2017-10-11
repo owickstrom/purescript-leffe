@@ -31,6 +31,14 @@ foreign import kind FileMode
 foreign import data Read :: FileMode
 foreign import data Write :: FileMode
 
+data FileMode (m :: FileMode) = FileMode
+
+modeRead :: FileMode Read
+modeRead = FileMode
+
+modeWrite :: FileMode Write
+modeWrite = FileMode
+
 data File (mode :: FileMode) = File FilePath FS.FileDescriptor
 
 class FileOpen m (mode :: FileMode) where
@@ -41,17 +49,18 @@ class FileOpen m (mode :: FileMode) where
     => RowLacks l r
     => SProxy l
     -> FilePath
+    -> FileMode mode
     -> Leffe m (Record r) (Record r') Unit
 
 instance fileOpenRead :: MonadAff (fs :: FS | e) m => FileOpen m Read where
-  openFile label path = do
+  openFile label path _ = do
     fd <- lift' $ liftAff $ FS.fdOpen path FS.R Nothing
     addLeffe label (File path fd)
     where
         bind = ibind
 
 instance fileOpenWrite :: MonadAff (fs :: FS | e) m => FileOpen m Write where
-  openFile label path = do
+  openFile label path _ = do
     fd <- lift' $ liftAff $ FS.fdOpen path FS.W Nothing
     addLeffe label (File path fd)
     where
@@ -150,8 +159,8 @@ example
 example = do
   -- Open two files, labeled temp1 and temp2, for reading and writing,
   -- respectively:
-  openFile temp1 "/tmp/in.txt" :: forall r. RowLacks "temp1" r => Leffe m {|r} {temp1 :: File Read|r} Unit
-  openFile temp2 "/tmp/out.txt" :: forall r. RowLacks "temp2" r => Leffe m {|r} {temp2 :: File Write | r} Unit
+  openFile temp1 "/tmp/in.txt" modeRead
+  openFile temp2 "/tmp/out.txt" modeWrite
 
   -- First check how large the input file is, and then create a buffer
   -- to hold it's contents. We are not doing any buffering.

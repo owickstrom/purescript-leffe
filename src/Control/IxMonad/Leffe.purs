@@ -1,65 +1,15 @@
-module Control.IxMonad.Leffe where
+module Control.IxMonad.Leffe ( module Control.IxMonad.Leffe.Class
+                             , Leffe
+                             , runLeffe
+                             ) where
 
 import Prelude
 
 import Control.IxMonad (class IxMonad, ibind, ipure)
 import Control.Monad.Eff.Class (class MonadEff, liftEff)
 import Data.Record as Record
-import Data.Symbol (class IsSymbol, SProxy)
 import Data.Tuple (Tuple(Tuple), fst)
-import Type.Row (class RowLacks)
-
-class IxMonad m <= IxMonadLeffe m where
-
-  -- Retrieves a labeled effect's resource.
-  getLeffe
-    :: forall label resource r r'
-     . IsSymbol label
-    => RowCons label resource r r'
-    => SProxy label
-    -> m (Record r') (Record r') resource
-
-  -- Adds a new labeled effect.
-  addLeffe
-    :: forall label resource r r'
-     . IsSymbol label
-    => RowLacks label r
-    => RowCons label resource r r'
-    => SProxy label
-    -> resource
-    -> m (Record r) (Record r') Unit
-
-  -- Modifies an existing labeled effect.
-  modifyLeffe
-    :: forall label r ri ro a b
-     . IsSymbol label
-    => RowCons label a r ri
-    => RowCons label b r ro
-    => SProxy label
-    -> (a -> b)
-    -> m (Record ri) (Record ro) Unit
-
-  -- Removes a labeled effect.
-  removeLeffe
-    :: forall label resource r r'
-     . IsSymbol label
-    => RowLacks label r
-    => RowCons label resource r r'
-    => SProxy label
-    -> m (Record r') (Record r) Unit
-
-
--- Replaces an existing labeled effect.
-replaceLeffe
-  :: forall m label r ri ro a b
-   . IxMonadLeffe m
-  => IsSymbol label
-  => RowCons label a r ri
-  => RowCons label b r ro
-  => SProxy label
-  -> b
-  -> m (Record ri) (Record ro) Unit
-replaceLeffe l b = modifyLeffe l (const b)
+import Control.IxMonad.Leffe.Class ( class IxMonadLeffe, getResource, addResource, removeResource, replaceResource, modifyResource, class IxMonadLeffeTrans, ilift )
 
 
 newtype Leffe m i o a = Leffe (i -> m (Tuple a o))
@@ -70,13 +20,13 @@ runLeffe (Leffe m) = map fst (m {})
 
 
 instance ixMonadLeffeLeffe :: Monad m ⇒ IxMonadLeffe (Leffe m) where
-  getLeffe label =
+  getResource label =
     Leffe $ \c -> pure (Tuple (Record.get label c) c)
-  addLeffe label resource =
+  addResource label resource =
     Leffe $ \c -> pure (Tuple unit (Record.insert label resource c))
-  modifyLeffe label f =
+  modifyResource label f =
     Leffe $ \c -> pure (Tuple unit (Record.modify label f c))
-  removeLeffe label =
+  removeResource label =
     Leffe $ \c -> pure (Tuple unit (Record.delete label c))
 
 
@@ -114,13 +64,13 @@ instance bindLeffe :: Monad m ⇒ Bind (Leffe m i i) where
 instance monadLeffe :: (Monad m, Applicative m) => Monad (Leffe m i i)
 
 
-lift' :: forall m i a. Monad m ⇒ m a -> Leffe m i i a
-lift' a = Leffe $ \s -> do
-  x <- a
-  pure (Tuple x s)
-
-
 instance monadEffLeffe :: MonadEff e m ⇒ MonadEff e (Leffe m i i) where
   liftEff e = Leffe $ \s -> do
     x <- liftEff e
+    pure (Tuple x s)
+
+
+instance ixMonadLeffeTransLeffe :: IxMonadLeffeTrans Leffe where
+  ilift a = Leffe $ \s -> do
+    x <- a
     pure (Tuple x s)

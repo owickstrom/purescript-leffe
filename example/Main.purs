@@ -12,7 +12,7 @@ import Control.Monad.Aff.Class (class MonadAff, liftAff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Exception (EXCEPTION)
-import Control.IxMonad.Leffe (Leffe, addLeffe, getLeffe, runLeffe, lift', removeLeffe)
+import Control.IxMonad.Leffe (Leffe, addResource, getResource, runLeffe, removeResource, ilift)
 import Data.Int (round)
 import Data.Maybe (Maybe(..))
 import Data.Symbol (class IsSymbol, SProxy(SProxy))
@@ -54,15 +54,15 @@ class FileOpen m (mode :: FileMode) where
 
 instance fileOpenRead :: MonadAff (fs :: FS | e) m => FileOpen m Read where
   openFile label path _ = do
-    fd <- lift' $ liftAff $ FS.fdOpen path FS.R Nothing
-    addLeffe label (File path fd)
+    fd <- ilift $ liftAff $ FS.fdOpen path FS.R Nothing
+    addResource label (File path fd)
     where
         bind = ibind
 
 instance fileOpenWrite :: MonadAff (fs :: FS | e) m => FileOpen m Write where
   openFile label path _ = do
-    fd <- lift' $ liftAff $ FS.fdOpen path FS.W Nothing
-    addLeffe label (File path fd)
+    fd <- ilift $ liftAff $ FS.fdOpen path FS.W Nothing
+    addResource label (File path fd)
     where
         bind = ibind
 
@@ -74,8 +74,8 @@ stat
   => SProxy l
   -> Leffe m (Record r') (Record r') Stats
 stat label =
-  getLeffe label
-  :>>= \(File path _) -> lift' $ liftAff $ FS.stat path
+  getResource label
+  :>>= \(File path _) -> ilift $ liftAff $ FS.stat path
 
 readFile
   :: forall m e l r r'
@@ -88,8 +88,8 @@ readFile
   -> BufferLength
   -> Leffe m (Record r') (Record r') Int
 readFile label buf offset length = do
-  File path fd <- getLeffe label
-  lift' $ liftAff $ FS.fdRead fd buf offset length Nothing
+  File path fd <- getResource label
+  ilift $ liftAff $ FS.fdRead fd buf offset length Nothing
   where
     bind = ibind
     discard = ibind
@@ -105,8 +105,8 @@ writeFile
   -> BufferLength
   -> Leffe m (Record r') (Record r') Unit
 writeFile label contents offset length = do
-  File path fd <- getLeffe label
-  lift' $ liftAff (FS.fdWrite fd contents offset length Nothing)
+  File path fd <- getResource label
+  ilift $ liftAff (FS.fdWrite fd contents offset length Nothing)
   pure unit
   where
     bind = ibind
@@ -130,9 +130,9 @@ closeFile'
   => SProxy l
   -> Leffe m (Record i) (Record o) Unit
 closeFile' label = do
-  File _ fd <- getLeffe label
-  lift' $ liftAff $ FS.fdClose fd
-  removeLeffe label
+  File _ fd <- getResource label
+  ilift $ liftAff $ FS.fdClose fd
+  removeResource label
   where
     bind = ibind
     discard = ibind
